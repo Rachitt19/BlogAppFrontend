@@ -4,7 +4,7 @@ import React from 'react';
 import { Heart, Calendar, User, Tag } from 'lucide-react';
 import { CATEGORIES } from '../../utils/constants';
 
-const BlogCard = ({ post, onLike }) => {
+const BlogCard = ({ post, onLike, onPostClick}) => {
   const getCategoryColor = (categoryId) => {
     const category = CATEGORIES.find(cat => cat.id === categoryId);
     return category ? category.color : 'from-gray-500 to-gray-600';
@@ -39,7 +39,7 @@ const BlogCard = ({ post, onLike }) => {
         </button>
       </div>
 
-      <h2 className="text-2xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-purple-700 transition-colors">
+      <h2 className="text-2xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-purple-700 transition-colors cursor-pointer" onClick={() => onPostClick(post)}>
         {post.title}
       </h2>
       

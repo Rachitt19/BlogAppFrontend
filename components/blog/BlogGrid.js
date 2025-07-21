@@ -3,7 +3,7 @@
 import React from 'react';
 import BlogCard from './BlogCard';
 
-const BlogGrid = ({ posts, onLike }) => {
+const BlogGrid = ({ posts, onLike, onPostClick }) => {
   if (posts.length === 0) {
     return (
       <div className="text-center py-20">
@@ -21,6 +21,7 @@ const BlogGrid = ({ posts, onLike }) => {
           key={post.id} 
           post={post} 
           onLike={onLike} 
+          onPostClick={onPostClick}
         />
       ))}
     </div>
