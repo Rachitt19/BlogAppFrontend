@@ -60,7 +60,9 @@ export default function HomePage() {
 
         {/* Blog Posts */}
         <BlogGrid posts={filteredPosts} onLike={handleLike} onPostClick={setSelectedPost} />
-        <PostViewModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+        {selectedPost && (
+          <PostViewModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+        )}
 
         {/* Create Post Modal */}
         <CreatePostModal
