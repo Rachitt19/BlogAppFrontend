@@ -20,9 +20,6 @@ const Header = () => {
               <h1 className="text-6xl font-black mb-4 bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent animate-pulse">
                 CollabX
               </h1>
-              <p className="text-xl text-white/80 font-light max-w-2xl">
-                Where stories come alive and communities connect through shared experiences
-              </p>
             </div>
             
             <div className="flex items-center gap-4">

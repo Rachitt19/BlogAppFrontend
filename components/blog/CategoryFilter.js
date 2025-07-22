@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Button from '../ui/Button';
-import { CATEGORIES } from '../../utils/constants';
+import { CATEGORIES } from '../../data/constants';
 
 const CategoryFilter = ({ activeCategory, onCategoryChange }) => {
   return (

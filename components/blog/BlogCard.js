@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Heart, Calendar, User, Tag } from 'lucide-react';
-import { CATEGORIES } from '../../utils/constants';
+import { CATEGORIES } from '../../data/constants';
 
 const BlogCard = ({ post, onLike, onPostClick}) => {
   const getCategoryColor = (categoryId) => {

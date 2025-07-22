@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { CATEGORIES } from '../../utils/constants';
+import { CATEGORIES } from '../../data/constants';
 
 const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -41,7 +41,6 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -58,7 +57,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
-              Story Title *
+              Story Title
             </label>
             <input
               id="title"
@@ -76,7 +75,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
           
           <div>
             <label htmlFor="author" className="block text-sm font-semibold text-gray-700 mb-2">
-              Author Name *
+              Author Name
             </label>
             <input
               id="author"
@@ -112,7 +111,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
 
         <div>
           <label htmlFor="excerpt" className="block text-sm font-semibold text-gray-700 mb-2">
-            Story Excerpt * ({formData.excerpt.length}/200)
+            Story Excerpt ({formData.excerpt.length}/200)
           </label>
           <textarea
             id="excerpt"
@@ -130,7 +129,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
 
         <div>
           <label htmlFor="content" className="block text-sm font-semibold text-gray-700 mb-2">
-            Full Story *
+            Full Story
           </label>
           <textarea
             id="content"
