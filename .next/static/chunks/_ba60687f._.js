@@ -9,93 +9,74 @@ __turbopack_context__.s({
     "authAPI": (()=>authAPI)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/axios/lib/axios.js [app-client] (ecmascript)");
-;
-const API_URL = ("TURBOPACK compile-time value", "https://blogapp-1-2zjh.onrender.com/api") || 'http://localhost:7777/api';
-// Create axios instance with CORS-friendly configuration
-const apiClient = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].create({
-    baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    },
-    withCredentials: true,
-    timeout: 10000 // 10 second timeout
-});
-// Request interceptor to add authorization token
-apiClient.interceptors.request.use((config)=>{
-    const token = ("TURBOPACK compile-time truthy", 1) ? localStorage.getItem('authToken') : ("TURBOPACK unreachable", undefined);
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-}, (error)=>{
-    return Promise.reject(error);
-});
-// Response interceptor for error handling
-apiClient.interceptors.response.use((response)=>response, (error)=>{
-    if (error.response?.status === 401) {
-        // Clear token if unauthorized
-        if ("TURBOPACK compile-time truthy", 1) {
-            localStorage.removeItem('authToken');
-        }
-    }
-    return Promise.reject(error);
-});
+const API_URL = ("TURBOPACK compile-time value", "http://localhost:7777/api") || 'http://localhost:7777/api';
 const authAPI = {
     signup: async (email, password, displayName)=>{
-        try {
-            const response = await apiClient.post('/auth/signup', {
+        const response = await fetch(`${API_URL}/auth/signup`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
                 email,
                 password,
                 displayName
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Signup error:', error.response?.data || error.message);
-            throw new Error(error.response?.data?.message || 'Signup failed');
+            })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || 'Signup failed');
         }
+        return data;
     },
     signin: async (email, password)=>{
-        try {
-            const response = await apiClient.post('/auth/signin', {
+        const response = await fetch(`${API_URL}/auth/signin`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
                 email,
                 password
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Signin error:', error.response?.data || error.message);
-            throw new Error(error.response?.data?.message || 'Signin failed');
+            })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || 'Signin failed');
         }
+        return data;
     },
     getCurrentUser: async (token)=>{
-        try {
-            const response = await apiClient.get('/auth/me', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Get user error:', error.response?.data || error.message);
-            throw new Error(error.response?.data?.message || 'Failed to fetch user');
+        const response = await fetch(`${API_URL}/auth/me`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch user');
         }
+        return data;
     },
     updateProfile: async (token, displayName, photoURL)=>{
-        try {
-            const response = await apiClient.put('/auth/profile', {
+        const response = await fetch(`${API_URL}/auth/profile`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
                 displayName,
                 photoURL
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Update profile error:', error.response?.data || error.message);
-            throw new Error(error.response?.data?.message || 'Failed to update profile');
+            })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to update profile');
         }
+        return data;
     }
 };
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
