@@ -9,74 +9,136 @@ __turbopack_context__.s({
     "authAPI": (()=>authAPI)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/axios/lib/axios.js [app-client] (ecmascript)");
+;
 const API_URL = ("TURBOPACK compile-time value", "http://localhost:7777/api") || 'http://localhost:7777/api';
+// Create axios instance with CORS-friendly configuration
+const apiClient = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].create({
+    baseURL: API_URL,
+    timeout: 10000,
+    withCredentials: true,
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest' // Helps with CORS
+    }
+});
+// Request interceptor - add authorization token
+apiClient.interceptors.request.use((config)=>{
+    // Add token to Authorization header if it exists
+    if ("TURBOPACK compile-time truthy", 1) {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    }
+    return config;
+}, (error)=>{
+    return Promise.reject(error);
+});
+// Response interceptor - handle errors
+apiClient.interceptors.response.use((response)=>response, (error)=>{
+    // Handle 401 unauthorized - clear token and logout
+    if (error.response?.status === 401) {
+        if ("TURBOPACK compile-time truthy", 1) {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+        }
+        // Optionally redirect to login
+        if ("object" !== 'undefined' && window.location.pathname !== '/') {
+        // window.location.href = '/';
+        }
+    }
+    // Log error details for debugging
+    console.error('API Error:', {
+        status: error.response?.status,
+        message: error.response?.data?.message || error.message,
+        url: error.config?.url
+    });
+    return Promise.reject(error);
+});
 const authAPI = {
     signup: async (email, password, displayName)=>{
-        const response = await fetch(`${API_URL}/auth/signup`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        try {
+            const response = await apiClient.post('/auth/signup', {
                 email,
                 password,
                 displayName
-            })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Signup failed');
+            });
+            // Store token if provided
+            if (response.data.token && "object" !== 'undefined') {
+                localStorage.setItem('authToken', response.data.token);
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+            }
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Signup failed';
+            console.error('Signup error:', message);
+            throw new Error(message);
         }
-        return data;
     },
     signin: async (email, password)=>{
-        const response = await fetch(`${API_URL}/auth/signin`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        try {
+            const response = await apiClient.post('/auth/signin', {
                 email,
                 password
-            })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Signin failed');
+            });
+            // Store token if provided
+            if (response.data.token && "object" !== 'undefined') {
+                localStorage.setItem('authToken', response.data.token);
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+            }
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Signin failed';
+            console.error('Signin error:', message);
+            throw new Error(message);
         }
-        return data;
     },
     getCurrentUser: async (token)=>{
-        const response = await fetch(`${API_URL}/auth/me`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Failed to fetch user');
+        try {
+            const response = await apiClient.get('/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to fetch user';
+            console.error('Get user error:', message);
+            throw new Error(message);
         }
-        return data;
     },
     updateProfile: async (token, displayName, photoURL)=>{
-        const response = await fetch(`${API_URL}/auth/profile`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
+        try {
+            const response = await apiClient.put('/auth/profile', {
                 displayName,
                 photoURL
-            })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Failed to update profile');
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            // Update stored user info
+            if ("TURBOPACK compile-time truthy", 1) {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                user.displayName = displayName;
+                user.photoURL = photoURL;
+                localStorage.setItem('user', JSON.stringify(user));
+            }
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to update profile';
+            console.error('Update profile error:', message);
+            throw new Error(message);
         }
-        return data;
+    },
+    logout: ()=>{
+        // Clear local storage
+        if ("TURBOPACK compile-time truthy", 1) {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+        }
     }
 };
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
