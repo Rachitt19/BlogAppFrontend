@@ -19,71 +19,99 @@ __turbopack_context__.s({
 const API_URL = ("TURBOPACK compile-time value", "https://blogapp-1-2zjh.onrender.com/api") || 'http://localhost:7777/api';
 const authAPI = {
     signup: async (email, password, displayName)=>{
-        const response = await fetch(`${API_URL}/auth/signup`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                email,
-                password,
-                displayName
-            })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Signup failed');
+        try {
+            const response = await fetch(`${API_URL}/auth/signup`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    email,
+                    password,
+                    displayName
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Signup failed');
+            }
+            return data;
+        } catch (error) {
+            console.error('Signup error:', error);
+            throw error;
         }
-        return data;
     },
     signin: async (email, password)=>{
-        const response = await fetch(`${API_URL}/auth/signin`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                email,
-                password
-            })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Signin failed');
+        try {
+            const response = await fetch(`${API_URL}/auth/signin`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Signin failed');
+            }
+            return data;
+        } catch (error) {
+            console.error('Signin error:', error);
+            throw error;
         }
-        return data;
     },
     getCurrentUser: async (token)=>{
-        const response = await fetch(`${API_URL}/auth/me`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+        try {
+            const response = await fetch(`${API_URL}/auth/me`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include'
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to fetch user');
             }
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Failed to fetch user');
+            return data;
+        } catch (error) {
+            console.error('Get user error:', error);
+            throw error;
         }
-        return data;
     },
     updateProfile: async (token, displayName, photoURL)=>{
-        const response = await fetch(`${API_URL}/auth/profile`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                displayName,
-                photoURL
-            })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Failed to update profile');
+        try {
+            const response = await fetch(`${API_URL}/auth/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    displayName,
+                    photoURL
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to update profile');
+            }
+            return data;
+        } catch (error) {
+            console.error('Update profile error:', error);
+            throw error;
         }
-        return data;
     }
 };
 }}),
