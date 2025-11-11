@@ -1,15 +1,7 @@
 'use client';
 
 import { useState, useEffect, createContext, useContext } from 'react';
-import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
-  updateProfile
-} from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { authAPI } from '../lib/api';
 
 const AuthContext = createContext();
 
@@ -24,22 +16,40 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(null);
 
+  // Load user from localStorage on mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return unsubscribe;
+    const storedToken = localStorage.getItem('authToken');
+    const storedUser = localStorage.getItem('user');
+    
+    if (storedToken && storedUser) {
+      try {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+      }
+    }
+    
+    setLoading(false);
   }, []);
 
   // Email/Password Sign Up
   const signUp = async (email, password, displayName) => {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(result.user, { displayName });
-      return { success: true, user: result.user };
+      const result = await authAPI.signup(email, password, displayName);
+      
+      if (result.success) {
+        localStorage.setItem('authToken', result.token);
+        localStorage.setItem('user', JSON.stringify(result.user));
+        setToken(result.token);
+        setUser(result.user);
+        return { success: true, user: result.user };
+      }
+      
+      return { success: false, error: result.message };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -48,18 +58,17 @@ export const AuthProvider = ({ children }) => {
   // Email/Password Sign In
   const signIn = async (email, password) => {
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      return { success: true, user: result.user };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
-
-  // Google Sign In
-  const signInWithGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      return { success: true, user: result.user };
+      const result = await authAPI.signin(email, password);
+      
+      if (result.success) {
+        localStorage.setItem('authToken', result.token);
+        localStorage.setItem('user', JSON.stringify(result.user));
+        setToken(result.token);
+        setUser(result.user);
+        return { success: true, user: result.user };
+      }
+      
+      return { success: false, error: result.message };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -68,7 +77,10 @@ export const AuthProvider = ({ children }) => {
   // Sign Out
   const logout = async () => {
     try {
-      await signOut(auth);
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      setToken(null);
+      setUser(null);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -78,9 +90,9 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    token,
     signUp,
     signIn,
-    signInWithGoogle,
     logout
   };
 
