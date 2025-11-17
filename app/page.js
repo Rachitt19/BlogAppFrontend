@@ -1,30 +1,84 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import Header from '../components/layout/Header';
 import CategoryFilter from '../components/blog/CategoryFilter';
 import BlogGrid from '../components/blog/BlogGrid';
 import CreatePostModal from '../components/blog/CreatePostModal';
 import Button from '../components/ui/Button';
-import useBlogPosts from '../hooks/useBlogPosts';
+import { postsAPI } from '../lib/api';
 import PostViewModal from '../components/blog/PostViewModal.js'
+
 export default function HomePage() {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPost, setSelectedPost] = useState(null);
-  const { posts, activeCategory, setActiveCategory, handleLike, addPost } = useBlogPosts();
+  const [posts, setPosts] = useState([]);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({});
+  const [sortBy, setSortBy] = useState('-createdAt');
 
-  const handleSubmit = (postData) => {
-    addPost(postData);
-    setShowModal(false);
+  useEffect(() => {
+    loadPosts();
+  }, [activeCategory, currentPage, sortBy]);
+
+  const loadPosts = async () => {
+    try {
+      setLoading(true);
+      const category = activeCategory === 'all' ? null : activeCategory;
+      const response = await postsAPI.getAllPosts(currentPage, 10, category, searchTerm, sortBy);
+      
+      if (response.success) {
+        setPosts(response.posts || []);
+        setPagination(response.pagination || {});
+      }
+    } catch (error) {
+      console.error('Failed to load posts:', error);
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredPosts = posts.filter(post =>
-    post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    post.content.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSearch = async (e) => {
+    const query = e.target.value;
+    setSearchTerm(query);
+    setCurrentPage(1);
+    
+    try {
+      const category = activeCategory === 'all' ? null : activeCategory;
+      const response = await postsAPI.getAllPosts(1, 10, category, query, sortBy);
+      
+      if (response.success) {
+        setPosts(response.posts || []);
+        setPagination(response.pagination || {});
+      }
+    } catch (error) {
+      console.error('Failed to search posts:', error);
+    }
+  };
 
+  const handleSubmit = (newPost) => {
+    // Add new post to the top of the list
+    setPosts([newPost, ...posts]);
+    setCurrentPage(1);
+  };
+
+  const handleLike = async (postId) => {
+    try {
+      const response = await postsAPI.likePost(postId);
+      if (response.success) {
+        // Update the post in the list
+        setPosts(posts.map(p => p._id === postId ? response.post : p));
+      }
+    } catch (error) {
+      console.error('Failed to like post:', error);
+      alert('Please login to like posts');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-800 to-pink-700">
@@ -36,11 +90,18 @@ export default function HomePage() {
             type="text"
             placeholder="Search blog posts..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearch}
             className="w-full lg:max-w-sm px-4 py-2 rounded-md bg-white/10 text-white placeholder-white/70 border border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-400"
           />
           <Button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              const token = localStorage.getItem('authToken');
+              if (!token) {
+                alert('Please login to create a post');
+                return;
+              }
+              setShowModal(true);
+            }}
             variant="primary"
             size="lg"
             className="flex items-center gap-2"
@@ -54,12 +115,66 @@ export default function HomePage() {
         <div className="flex flex-col lg:flex-row gap-6 mb-12 items-center justify-between">
           <CategoryFilter
             activeCategory={activeCategory}
-            onCategoryChange={setActiveCategory}
+            onCategoryChange={(category) => {
+              setActiveCategory(category);
+              setCurrentPage(1);
+            }}
           />
+          
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="px-4 py-2 rounded-md bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-400"
+          >
+            <option value="-createdAt" className="text-gray-800">Newest First</option>
+            <option value="createdAt" className="text-gray-800">Oldest First</option>
+            <option value="-views" className="text-gray-800">Most Viewed</option>
+            <option value="-likes" className="text-gray-800">Most Liked</option>
+          </select>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center text-white py-12">
+            <div className="animate-spin inline-block">Loading stories...</div>
+          </div>
+        )}
+
         {/* Blog Posts */}
-        <BlogGrid posts={filteredPosts} onLike={handleLike} onPostClick={setSelectedPost} />
+        {!loading && (
+          <>
+            <BlogGrid posts={posts} onLike={handleLike} onPostClick={setSelectedPost} />
+            
+            {posts.length === 0 && (
+              <div className="text-center text-white py-12">
+                <p className="text-lg">No stories found. Start the first one!</p>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {pagination.pages > 1 && (
+              <div className="flex justify-center gap-2 mt-12">
+                {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      currentPage === page
+                        ? 'bg-pink-500 text-white'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
         {selectedPost && (
           <PostViewModal post={selectedPost} onClose={() => setSelectedPost(null)} />
         )}

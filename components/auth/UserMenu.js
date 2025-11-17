@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import Link from 'next/link';
 
 const UserMenu = () => {
   const { user, logout } = useAuth();
@@ -60,6 +61,16 @@ const UserMenu = () => {
             <p className="font-semibold text-gray-900">{getDisplayName()}</p>
             <p className="text-sm text-gray-500">{user?.email}</p>
           </div>
+          
+          <Link href="/profile">
+            <button
+              onClick={() => setIsOpen(false)}
+              className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+            >
+              <User size={16} />
+              My Profile
+            </button>
+          </Link>
           
           <button
             onClick={() => setIsOpen(false)}

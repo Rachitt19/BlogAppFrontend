@@ -4,39 +4,64 @@ import React, { useState } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { CATEGORIES } from '../../data/constants';
+import { postsAPI } from '../../lib/api';
 
 const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     title: '',
-    author: '',
     category: 'technology',
     content: '',
-    excerpt: ''
+    tags: ''
   });
 
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
     
     if (!formData.title.trim()) newErrors.title = 'Title is required';
-    if (!formData.author.trim()) newErrors.author = 'Author name is required';
-    if (!formData.content.trim()) newErrors.content = 'Story content is required';
-    if (!formData.excerpt.trim()) newErrors.excerpt = 'Story excerpt is required';
+    if (!formData.content.trim()) newErrors.content = 'Content is required';
     
-    if (formData.title.length > 100) newErrors.title = 'Title must be less than 100 characters';
-    if (formData.excerpt.length > 200) newErrors.excerpt = 'Excerpt must be less than 200 characters';
+    if (formData.title.length > 200) newErrors.title = 'Title must be less than 200 characters';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
     
-    onSubmit(formData);
-    setFormData({ title: '', author: '', category: 'technology', content: '', excerpt: '' });
-    setErrors({});
+    setLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      
+      if (!token) {
+        setErrors({ submit: 'You must be logged in to create a post' });
+        setLoading(false);
+        return;
+      }
+
+      const tags = formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      
+      const response = await postsAPI.createPost(
+        formData.title,
+        formData.content,
+        formData.category,
+        tags
+      );
+
+      if (response.success) {
+        onSubmit(response.post);
+        setFormData({ title: '', category: 'technology', content: '', tags: '' });
+        setErrors({});
+        onClose();
+      }
+    } catch (error) {
+      setErrors({ submit: error.message || 'Failed to create post' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (field, value) => {
@@ -54,41 +79,22 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Share Your Story">
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
-              Story Title
-            </label>
-            <input
-              id="title"
-              type="text"
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
-              className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
-                errors.title ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-purple-500'
-              }`}
-              placeholder="Enter your story title..."
-              maxLength={100}
-            />
-            {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-          </div>
-          
-          <div>
-            <label htmlFor="author" className="block text-sm font-semibold text-gray-700 mb-2">
-              Author Name
-            </label>
-            <input
-              id="author"
-              type="text"
-              value={formData.author}
-              onChange={(e) => handleInputChange('author', e.target.value)}
-              className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
-                errors.author ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-purple-500'
-              }`}
-              placeholder="Your name..."
-            />
-            {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
-          </div>
+        <div>
+          <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
+            Story Title
+          </label>
+          <input
+            id="title"
+            type="text"
+            value={formData.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
+              errors.title ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-purple-500'
+            }`}
+            placeholder="Enter your story title..."
+            maxLength={200}
+          />
+          {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
         </div>
 
         <div>
@@ -110,21 +116,17 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
         </div>
 
         <div>
-          <label htmlFor="excerpt" className="block text-sm font-semibold text-gray-700 mb-2">
-            Story Excerpt ({formData.excerpt.length}/200)
+          <label htmlFor="tags" className="block text-sm font-semibold text-gray-700 mb-2">
+            Tags (comma-separated)
           </label>
-          <textarea
-            id="excerpt"
-            value={formData.excerpt}
-            onChange={(e) => handleInputChange('excerpt', e.target.value)}
-            className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors resize-none ${
-              errors.excerpt ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-purple-500'
-            }`}
-            rows="3"
-            placeholder="A brief description of your story..."
-            maxLength={200}
+          <input
+            id="tags"
+            type="text"
+            value={formData.tags}
+            onChange={(e) => handleInputChange('tags', e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
+            placeholder="e.g. technology, javascript, web development"
           />
-          {errors.excerpt && <p className="text-red-500 text-sm mt-1">{errors.excerpt}</p>}
         </div>
 
         <div>
@@ -138,18 +140,24 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
             className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors resize-none ${
               errors.content ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-purple-500'
             }`}
-            rows="8"
+            rows="10"
             placeholder="Share your complete story here..."
           />
           {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
         </div>
 
+        {errors.submit && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {errors.submit}
+          </div>
+        )}
+
         <div className="flex gap-4 pt-4">
-          <Button variant="outline" onClick={handleClose} className="flex-1">
+          <Button variant="outline" onClick={handleClose} className="flex-1" disabled={loading}>
             Cancel
           </Button>
-          <Button variant="gradient" onClick={handleSubmit} className="flex-1">
-            Publish Story
+          <Button variant="gradient" onClick={handleSubmit} className="flex-1" disabled={loading}>
+            {loading ? 'Publishing...' : 'Publish Story'}
           </Button>
         </div>
       </div>

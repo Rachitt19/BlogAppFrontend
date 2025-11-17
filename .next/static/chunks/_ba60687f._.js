@@ -6,7 +6,9 @@
 var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
 __turbopack_context__.s({
-    "authAPI": (()=>authAPI)
+    "authAPI": (()=>authAPI),
+    "communitiesAPI": (()=>communitiesAPI),
+    "postsAPI": (()=>postsAPI)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/axios/lib/axios.js [app-client] (ecmascript)");
@@ -15,7 +17,7 @@ const API_URL = ("TURBOPACK compile-time value", "http://localhost:7777/api") ||
 // Create axios instance with CORS-friendly configuration
 const apiClient = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].create({
     baseURL: API_URL,
-    timeout: 10000,
+    timeout: 30000,
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
@@ -68,7 +70,11 @@ const authAPI = {
             // Store token if provided
             if (response.data.token && "object" !== 'undefined') {
                 localStorage.setItem('authToken', response.data.token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
+                localStorage.setItem('user', JSON.stringify(response.data.user || {
+                    email,
+                    displayName
+                }));
+                localStorage.setItem('userId', response.data.id);
             }
             return response.data;
         } catch (error) {
@@ -86,7 +92,10 @@ const authAPI = {
             // Store token if provided
             if (response.data.token && "object" !== 'undefined') {
                 localStorage.setItem('authToken', response.data.token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
+                localStorage.setItem('user', JSON.stringify(response.data.user || {
+                    email
+                }));
+                localStorage.setItem('userId', response.data.id);
             }
             return response.data;
         } catch (error) {
@@ -109,15 +118,11 @@ const authAPI = {
             throw new Error(message);
         }
     },
-    updateProfile: async (token, displayName, photoURL)=>{
+    updateProfile: async (displayName, photoURL)=>{
         try {
             const response = await apiClient.put('/auth/profile', {
                 displayName,
                 photoURL
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
             });
             // Update stored user info
             if ("TURBOPACK compile-time truthy", 1) {
@@ -138,6 +143,229 @@ const authAPI = {
         if ("TURBOPACK compile-time truthy", 1) {
             localStorage.removeItem('authToken');
             localStorage.removeItem('user');
+            localStorage.removeItem('userId');
+        }
+    }
+};
+const postsAPI = {
+    // Get all posts with pagination, search, filter, sort
+    getAllPosts: async (page = 1, limit = 10, category = null, search = null, sort = '-createdAt')=>{
+        try {
+            let url = `/blogs?page=${page}&limit=${limit}&sort=${sort}`;
+            if (category && category !== 'all' && category !== 'All') {
+                url += `&category=${category}`;
+            }
+            if (search) {
+                url += `&search=${encodeURIComponent(search)}`;
+            }
+            const response = await apiClient.get(url);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to fetch posts';
+            console.error('Get posts error:', message);
+            throw new Error(message);
+        }
+    },
+    // Get single post
+    getPost: async (postId)=>{
+        try {
+            const response = await apiClient.get(`/blogs/${postId}`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to fetch post';
+            console.error('Get post error:', message);
+            throw new Error(message);
+        }
+    },
+    // Create post
+    createPost: async (title, content, category, tags = [], image = null)=>{
+        try {
+            const response = await apiClient.post('/blogs', {
+                title,
+                content,
+                category,
+                tags,
+                image
+            });
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to create post';
+            console.error('Create post error:', message);
+            throw new Error(message);
+        }
+    },
+    // Update post
+    updatePost: async (postId, title, content, category, tags = [], image = null)=>{
+        try {
+            const response = await apiClient.put(`/blogs/${postId}`, {
+                title,
+                content,
+                category,
+                tags,
+                image
+            });
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to update post';
+            console.error('Update post error:', message);
+            throw new Error(message);
+        }
+    },
+    // Delete post
+    deletePost: async (postId)=>{
+        try {
+            const response = await apiClient.delete(`/blogs/${postId}`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to delete post';
+            console.error('Delete post error:', message);
+            throw new Error(message);
+        }
+    },
+    // Like post
+    likePost: async (postId)=>{
+        try {
+            const response = await apiClient.post(`/blogs/${postId}/like`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to like post';
+            console.error('Like post error:', message);
+            throw new Error(message);
+        }
+    },
+    // Add comment
+    addComment: async (postId, content)=>{
+        try {
+            const response = await apiClient.post(`/blogs/${postId}/comments`, {
+                content
+            });
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to add comment';
+            console.error('Add comment error:', message);
+            throw new Error(message);
+        }
+    },
+    // Delete comment
+    deleteComment: async (postId, commentId)=>{
+        try {
+            const response = await apiClient.delete(`/blogs/${postId}/comments/${commentId}`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to delete comment';
+            console.error('Delete comment error:', message);
+            throw new Error(message);
+        }
+    },
+    // Get user's posts
+    getUserPosts: async (userId, page = 1, limit = 10)=>{
+        try {
+            const response = await apiClient.get(`/blogs/users/${userId}/posts?page=${page}&limit=${limit}`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to fetch user posts';
+            console.error('Get user posts error:', message);
+            throw new Error(message);
+        }
+    },
+    // Get user's liked posts
+    getLikedPosts: async (userId, page = 1, limit = 10)=>{
+        try {
+            const response = await apiClient.get(`/blogs/users/${userId}/liked-posts?page=${page}&limit=${limit}`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to fetch liked posts';
+            console.error('Get liked posts error:', message);
+            throw new Error(message);
+        }
+    }
+};
+const communitiesAPI = {
+    // Get all communities
+    getAllCommunities: async (page = 1, limit = 10, search = null)=>{
+        try {
+            let url = `/communities?page=${page}&limit=${limit}`;
+            if (search) {
+                url += `&search=${encodeURIComponent(search)}`;
+            }
+            const response = await apiClient.get(url);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to fetch communities';
+            console.error('Get communities error:', message);
+            throw new Error(message);
+        }
+    },
+    // Get popular communities
+    getPopularCommunities: async (limit = 6)=>{
+        try {
+            const response = await apiClient.get(`/communities/popular?limit=${limit}`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to fetch popular communities';
+            console.error('Get popular communities error:', message);
+            throw new Error(message);
+        }
+    },
+    // Get single community
+    getCommunity: async (communityId)=>{
+        try {
+            const response = await apiClient.get(`/communities/${communityId}`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to fetch community';
+            console.error('Get community error:', message);
+            throw new Error(message);
+        }
+    },
+    // Create community
+    createCommunity: async (name, description, icon = '🚀', category = 'general', rules = [])=>{
+        try {
+            const response = await apiClient.post('/communities', {
+                name,
+                description,
+                icon,
+                category,
+                rules
+            });
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to create community';
+            console.error('Create community error:', message);
+            throw new Error(message);
+        }
+    },
+    // Join community
+    joinCommunity: async (communityId)=>{
+        try {
+            const response = await apiClient.post(`/communities/${communityId}/join`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to join community';
+            console.error('Join community error:', message);
+            throw new Error(message);
+        }
+    },
+    // Leave community
+    leaveCommunity: async (communityId)=>{
+        try {
+            const response = await apiClient.post(`/communities/${communityId}/leave`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to leave community';
+            console.error('Leave community error:', message);
+            throw new Error(message);
+        }
+    },
+    // Get user's joined communities
+    getUserCommunities: async (userId, page = 1, limit = 10)=>{
+        try {
+            const response = await apiClient.get(`/communities/user/${userId}?page=${page}&limit=${limit}`);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to fetch user communities';
+            console.error('Get user communities error:', message);
+            throw new Error(message);
         }
     }
 };
