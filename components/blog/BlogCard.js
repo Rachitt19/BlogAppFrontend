@@ -26,8 +26,18 @@ const BlogCard = ({ post, onLike, onPostClick }) => {
   };
 
   const authorName = post.author?.displayName || post.authorName || 'Anonymous';
-  const isLiked = post.userLiked || false;
-  const likeCount = post.likes?.length || 0;
+  
+  // Get userId from localStorage
+  let userId = null;
+  if (typeof window !== 'undefined') {
+    userId = localStorage.getItem('userId');
+  }
+  
+  // Calculate like state
+  const likes = Array.isArray(post.likes) ? post.likes : [];
+  const likeCount = likes.length;
+  const isLiked = userId ? likes.includes(userId) : false;
+  
   const commentCount = post.comments?.length || 0;
   const viewCount = post.views || 0;
   const postId = post._id || post.id;

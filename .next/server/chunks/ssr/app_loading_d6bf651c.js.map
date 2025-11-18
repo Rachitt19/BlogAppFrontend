@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 7, "column": 0}, "map": {"version":3,"sources":["file:///Users/rachitgupta/Desktop/BlogApp/client/app/loading.js"],"sourcesContent":["export default function Loading() {\n  return (\n    <div className=\"min-h-screen bg-gradient-to-br from-indigo-900 via-purple-800 to-pink-700 flex items-center justify-center\">\n      <div className=\"text-center\">\n        <div className=\"animate-spin rounded-full h-32 w-32 border-b-2 border-white mb-4\"></div>\n        <p className=\"text-white text-xl\">Loading your stories...</p>\n      </div>\n    </div>\n  );\n}"],"names":[],"mappings":";;;;;AAAe,SAAS;IACtB,qBACE,8OAAC;QAAI,WAAU;kBACb,cAAA,8OAAC;YAAI,WAAU;;8BACb,8OAAC;oBAAI,WAAU;;;;;;8BACf,8OAAC;oBAAE,WAAU;8BAAqB;;;;;;;;;;;;;;;;;AAI1C","debugId":null}}]
-}

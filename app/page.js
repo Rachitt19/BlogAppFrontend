@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import Header from '../components/layout/Header';
 import CategoryFilter from '../components/blog/CategoryFilter';
@@ -21,16 +21,14 @@ export default function HomePage() {
   const [pagination, setPagination] = useState({});
   const [sortBy, setSortBy] = useState('-createdAt');
 
-  useEffect(() => {
-    loadPosts();
-  }, [activeCategory, currentPage, sortBy]);
-
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async () => {
     try {
       setLoading(true);
       const category = activeCategory === 'all' ? null : activeCategory;
+      console.log('Loading posts with sort:', sortBy, 'page:', currentPage, 'category:', category);
       const response = await postsAPI.getAllPosts(currentPage, 10, category, searchTerm, sortBy);
       
+      console.log('API Response:', response);
       if (response.success) {
         setPosts(response.posts || []);
         setPagination(response.pagination || {});
@@ -41,7 +39,12 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeCategory, currentPage, sortBy, searchTerm]);
+
+  // Load posts when any dependency changes
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
 
   const handleSearch = async (e) => {
     const query = e.target.value;
@@ -68,15 +71,31 @@ export default function HomePage() {
   };
 
   const handleLike = async (postId) => {
+    const userId = localStorage.getItem('userId');
+    
+    if (!userId) {
+      alert('Please login to like posts');
+      return;
+    }
+
     try {
+      // Call API to like/unlike the post
       const response = await postsAPI.likePost(postId);
-      if (response.success) {
-        // Update the post in the list
-        setPosts(posts.map(p => p._id === postId ? response.post : p));
+      
+      if (response.success && response.post) {
+        // Update the specific post with the response from server
+        setPosts(prevPosts =>
+          prevPosts.map(post =>
+            post._id === postId ? response.post : post
+          )
+        );
+      } else {
+        console.error('Like failed');
+        alert('Failed to update like');
       }
     } catch (error) {
       console.error('Failed to like post:', error);
-      alert('Please login to like posts');
+      alert('Failed to update like');
     }
   };
 
@@ -116,6 +135,7 @@ export default function HomePage() {
           <CategoryFilter
             activeCategory={activeCategory}
             onCategoryChange={(category) => {
+              console.log('Category changed to:', category);
               setActiveCategory(category);
               setCurrentPage(1);
             }}
@@ -124,7 +144,9 @@ export default function HomePage() {
           <select
             value={sortBy}
             onChange={(e) => {
-              setSortBy(e.target.value);
+              const newSort = e.target.value;
+              console.log('Sort dropdown changed to:', newSort);
+              setSortBy(newSort);
               setCurrentPage(1);
             }}
             className="px-4 py-2 rounded-md bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-400"

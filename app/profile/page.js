@@ -24,60 +24,85 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('posts');
   const itemsPerPage = 5;
 
+  // Load user basic info on mount
   useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const storedUser = localStorage.getItem('user');
-        const userId = localStorage.getItem('userId');
-        const token = localStorage.getItem('authToken');
+    const storedUser = localStorage.getItem('user');
+    const userId = localStorage.getItem('userId');
+    const token = localStorage.getItem('authToken');
 
-        if (!token || !userId) {
-          router.push('/');
+    if (!token || !userId) {
+      router.push('/');
+      return;
+    }
+
+    const userData = storedUser ? JSON.parse(storedUser) : {};
+    setUser(userData);
+    setFormData({
+      displayName: userData.displayName || '',
+      photoURL: userData.photoURL || ''
+    });
+  }, [router]);
+
+  // Load data based on active tab
+  useEffect(() => {
+    const loadTabData = async () => {
+      try {
+        const userId = localStorage.getItem('userId');
+        console.log('Loading tab data for user:', userId, 'Tab:', activeTab);
+        if (!userId) {
+          console.log('No user ID found');
           return;
         }
 
-        const userData = storedUser ? JSON.parse(storedUser) : {};
-        setUser(userData);
-        setFormData({
-          displayName: userData.displayName || '',
-          photoURL: userData.photoURL || ''
-        });
+        setLoading(true);
 
-        // Load user's posts
         if (activeTab === 'posts') {
+          console.log('Fetching user posts...');
           const postsData = await postsAPI.getUserPosts(userId, currentPage, itemsPerPage);
+          console.log('User posts response:', postsData);
           setPosts(postsData.posts || []);
           setPagination(postsData.pagination || {});
         } 
-        // Load liked posts
         else if (activeTab === 'liked') {
+          console.log('Fetching liked posts...');
           const likedData = await postsAPI.getLikedPosts(userId, likedPage, itemsPerPage);
+          console.log('Liked posts response:', likedData);
           setLikedPosts(likedData.posts || []);
           setLikedPagination(likedData.pagination || {});
         }
-        // Load user communities
         else if (activeTab === 'communities') {
+          console.log('Fetching communities...');
           const communitiesData = await communitiesAPI.getUserCommunities(userId);
+          console.log('Communities response:', communitiesData);
           setUserCommunities(communitiesData.communities || []);
         }
+
+        setLoading(false);
       } catch (error) {
-        console.error('Failed to load user data:', error);
-      } finally {
+        console.error('Error loading tab data:', error);
         setLoading(false);
       }
     };
 
-    loadUserData();
-  }, [currentPage, likedPage, activeTab, router]);
+    loadTabData();
+  }, [activeTab, currentPage, likedPage]);
 
   const handleUpdateProfile = async () => {
     try {
       setLoading(true);
-      await authAPI.updateProfile(formData.displayName, formData.photoURL);
-      setUser(formData);
-      setEditingProfile(false);
+      const response = await authAPI.updateProfile(formData.displayName, formData.photoURL);
+      
+      if (response.success) {
+        // Update local state
+        setUser(formData);
+        // Update localStorage
+        localStorage.setItem('user', JSON.stringify(formData));
+        setEditingProfile(false);
+        alert('Profile updated successfully!');
+      }
     } catch (error) {
       console.error('Failed to update profile:', error);
+      alert('Failed to update profile');
     } finally {
       setLoading(false);
     }
