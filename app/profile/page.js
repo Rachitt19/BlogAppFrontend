@@ -281,6 +281,7 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     authAPI.logout();
+    window.location.reload();
     router.push('/');
   };
 

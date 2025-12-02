@@ -27,7 +27,9 @@ const UserMenu = () => {
     await logout();
     setIsOpen(false);
     // Redirect to home page
+
     router.push('/');
+
     router.refresh();
   };
 
