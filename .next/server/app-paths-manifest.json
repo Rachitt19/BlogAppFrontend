@@ -1,5 +1,8 @@
 {
+  "/blog/[id]/edit/page": "app/blog/[id]/edit/page.js",
   "/blog/[id]/page": "app/blog/[id]/page.js",
+  "/communities/[id]/page": "app/communities/[id]/page.js",
+  "/communities/page": "app/communities/page.js",
   "/page": "app/page.js",
   "/profile/page": "app/profile/page.js"
 }

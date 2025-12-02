@@ -58,6 +58,15 @@ export default function BlogDetailPage() {
         setPost(response.post);
         // Check if user's ID is in the likes array
         setLiked(response.post.likes?.includes(userId) || false);
+
+        // Notify other pages that a post was liked/unliked
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('postsUpdated', { detail: { post: response.post, action: 'liked' } }));
+          } catch (e) {
+            window.dispatchEvent(new Event('postsUpdated'));
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to like post:', error);

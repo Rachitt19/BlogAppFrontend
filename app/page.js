@@ -89,6 +89,15 @@ export default function HomePage() {
             post._id === postId ? response.post : post
           )
         );
+
+        // Notify other pages that likes changed
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('postsUpdated', { detail: { post: response.post, action: 'liked' } }));
+          } catch (e) {
+            window.dispatchEvent(new Event('postsUpdated'));
+          }
+        }
       } else {
         console.error('Like failed');
         alert('Failed to update like');

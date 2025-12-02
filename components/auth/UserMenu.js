@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { User, LogOut, Settings, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
 const UserMenu = () => {
+  const router = useRouter();
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
@@ -24,6 +26,9 @@ const UserMenu = () => {
   const handleLogout = async () => {
     await logout();
     setIsOpen(false);
+    // Redirect to home page
+    router.push('/');
+    router.refresh();
   };
 
   const getDisplayName = () => {

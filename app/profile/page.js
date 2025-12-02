@@ -10,6 +10,7 @@ import Link from 'next/link';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const [userId, setUserId] = useState(null);
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [likedPosts, setLikedPosts] = useState([]);
@@ -24,47 +25,101 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('posts');
   const itemsPerPage = 5;
 
-  // Load user basic info on mount
+  // Load user basic info on mount AND load initial posts
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const userId = localStorage.getItem('userId');
-    const token = localStorage.getItem('authToken');
+    const init = async () => {
+      const storedUserRaw = localStorage.getItem('user');
+      let storedUserId = localStorage.getItem('userId');
+      const token = localStorage.getItem('authToken');
 
-    if (!token || !userId) {
-      router.push('/');
-      return;
-    }
+      console.log('Profile page initializing. storedUserId:', storedUserId, 'token present:', !!token);
 
-    const userData = storedUser ? JSON.parse(storedUser) : {};
-    setUser(userData);
-    setFormData({
-      displayName: userData.displayName || '',
-      photoURL: userData.photoURL || ''
-    });
+      // If no token, redirect to home
+      if (!token) {
+        console.log('No auth token found, redirecting to home');
+        router.push('/');
+        return;
+      }
+
+      let userData = storedUserRaw ? JSON.parse(storedUserRaw) : null;
+
+      // If userId not in localStorage, try to fetch current user from server
+      if (!storedUserId) {
+        try {
+          console.log('No userId in localStorage, fetching current user from API');
+          const meRes = await authAPI.getCurrentUser(token);
+          if (meRes && meRes.user) {
+            const uid = meRes.user._id || meRes.user.id || meRes.user.userId || '';
+            if (uid) {
+              storedUserId = uid;
+              userData = meRes.user;
+              localStorage.setItem('user', JSON.stringify(userData));
+              localStorage.setItem('userId', uid);
+              console.log('Fetched and stored userId:', uid);
+            } else {
+              console.warn('Current user returned without id, redirecting');
+              router.push('/');
+              return;
+            }
+          } else {
+            console.warn('Failed to fetch current user, redirecting');
+            router.push('/');
+            return;
+          }
+        } catch (err) {
+          console.error('Error fetching current user:', err);
+          router.push('/');
+          return;
+        }
+      }
+
+      // At this point we have token and storedUserId
+      setUser(userData || {});
+      setUserId(storedUserId);
+      setFormData({
+        displayName: (userData && userData.displayName) || '',
+        photoURL: (userData && userData.photoURL) || ''
+      });
+
+      // Load initial posts data
+      try {
+        console.log('Loading initial posts for userId:', storedUserId);
+        setLoading(true);
+        const postsData = await postsAPI.getUserPosts(storedUserId, 1, itemsPerPage);
+        console.log('Initial posts loaded:', postsData);
+        setPosts(postsData.posts || []);
+        setPagination(postsData.pagination || {});
+      } catch (error) {
+        console.error('Error loading initial posts:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
   }, [router]);
 
   // Load data based on active tab
   useEffect(() => {
+    if (!userId) {
+      console.log('userId not set yet, skipping tab data load');
+      return;
+    }
+
     const loadTabData = async () => {
       try {
-        const userId = localStorage.getItem('userId');
-        console.log('Loading tab data for user:', userId, 'Tab:', activeTab);
-        if (!userId) {
-          console.log('No user ID found');
-          return;
-        }
-
+        console.log('Loading tab data. activeTab:', activeTab, 'userId:', userId);
         setLoading(true);
 
         if (activeTab === 'posts') {
-          console.log('Fetching user posts...');
+          console.log('Fetching user posts for page:', currentPage);
           const postsData = await postsAPI.getUserPosts(userId, currentPage, itemsPerPage);
           console.log('User posts response:', postsData);
           setPosts(postsData.posts || []);
           setPagination(postsData.pagination || {});
         } 
         else if (activeTab === 'liked') {
-          console.log('Fetching liked posts...');
+          console.log('Fetching liked posts for page:', likedPage);
           const likedData = await postsAPI.getLikedPosts(userId, likedPage, itemsPerPage);
           console.log('Liked posts response:', likedData);
           setLikedPosts(likedData.posts || []);
@@ -85,7 +140,63 @@ export default function ProfilePage() {
     };
 
     loadTabData();
-  }, [activeTab, currentPage, likedPage]);
+  }, [userId, activeTab, currentPage, likedPage]);
+
+  // Listen for external updates (new post created or liked elsewhere) and refresh
+  useEffect(() => {
+    const onPostsUpdated = (e) => {
+      const detail = e?.detail || {};
+      console.log('postsUpdated event received on profile, reloading posts', detail);
+      if (!userId) return;
+
+      try {
+        if (detail.action === 'created') {
+          const authorId = detail.authorId || detail.post?.author?._id || detail.post?.author;
+          if (authorId === userId) {
+            setCurrentPage(1);
+            postsAPI.getUserPosts(userId, 1, itemsPerPage).then(res => {
+              setPosts(res.posts || []);
+              setPagination(res.pagination || {});
+            }).catch(err => console.error('Failed to reload posts after create:', err));
+          }
+        } else if (detail.action === 'liked') {
+          const actorId = detail.userId || detail.actorId || (detail.post?.likedBy) || localStorage.getItem('userId');
+          // If the current user performed the like OR the post now includes the current user's like, refresh liked tab
+          const postIncludesCurrentUser = detail.post?.likes?.includes(userId);
+          if (actorId === userId || postIncludesCurrentUser) {
+            if (activeTab === 'liked') {
+              postsAPI.getLikedPosts(userId, likedPage, itemsPerPage).then(res => {
+                setLikedPosts(res.posts || []);
+                setLikedPagination(res.pagination || {});
+              }).catch(err => console.error('Failed to reload liked posts:', err));
+            }
+          }
+
+          // Also, if the liked post belongs to the user, update posts tab counts
+          const likedPostAuthor = detail.post?.author?._id || detail.post?.author || detail.authorId;
+          if (likedPostAuthor === userId && activeTab === 'posts') {
+            postsAPI.getUserPosts(userId, currentPage, itemsPerPage).then(res => {
+              setPosts(res.posts || []);
+              setPagination(res.pagination || {});
+            }).catch(err => console.error('Failed to reload posts after like:', err));
+          }
+        } else {
+          // Generic refresh for posts tab
+          if (activeTab === 'posts') {
+            postsAPI.getUserPosts(userId, currentPage, itemsPerPage).then(res => {
+              setPosts(res.posts || []);
+              setPagination(res.pagination || {});
+            }).catch(err => console.error('Failed to reload posts:', err));
+          }
+        }
+      } catch (err) {
+        console.error('Error handling postsUpdated event on profile:', err);
+      }
+    };
+
+    window.addEventListener('postsUpdated', onPostsUpdated);
+    return () => window.removeEventListener('postsUpdated', onPostsUpdated);
+  }, [userId, activeTab, currentPage, likedPage]);
 
   const handleUpdateProfile = async () => {
     try {

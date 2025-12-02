@@ -53,6 +53,34 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }) => {
 
       if (response.success) {
         onSubmit(response.post);
+        // Notify other pages to refresh their posts lists (profile/feed)
+        if (typeof window !== 'undefined') {
+          try {
+            let authorId = '';
+            if (response.post) {
+              // response.post.author might be a populated object or an id string
+              authorId = response.post.author?._id || response.post.author || '';
+            }
+
+            // If created by current user, proactively refresh their posts list
+            const currentUserId = localStorage.getItem('userId');
+            if (authorId && currentUserId && authorId === currentUserId) {
+              // best-effort refresh via API
+              try {
+                const refreshed = await postsAPI.getUserPosts(currentUserId, 1, 5);
+                window.dispatchEvent(new CustomEvent('postsUpdated', { detail: { post: response.post, action: 'created', authorId, refreshed } }));
+              } catch (err) {
+                // still dispatch event even if refresh failed
+                window.dispatchEvent(new CustomEvent('postsUpdated', { detail: { post: response.post, action: 'created', authorId } }));
+              }
+            } else {
+              window.dispatchEvent(new CustomEvent('postsUpdated', { detail: { post: response.post, action: 'created', authorId } }));
+            }
+          } catch (e) {
+            // fallback for older browsers - still dispatch generic event
+            try { window.dispatchEvent(new Event('postsUpdated')); } catch (err) { /* ignore */ }
+          }
+        }
         setFormData({ title: '', category: 'technology', content: '', tags: '' });
         setErrors({});
         onClose();
