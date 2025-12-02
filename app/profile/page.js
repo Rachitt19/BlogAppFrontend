@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/layout/Header';
 import Button from '../../components/ui/Button';
-import { postsAPI, authAPI, communitiesAPI } from '../../lib/api';
+import UserListModal from '../../components/profile/UserListModal';
+import { postsAPI, authAPI, communitiesAPI, followAPI } from '../../lib/api';
 import { Edit2, Trash2, Eye, MessageCircle, Heart, Users, LogOut } from 'lucide-react';
 import Link from 'next/link';
 
@@ -24,6 +25,40 @@ export default function ProfilePage() {
   const [likedPagination, setLikedPagination] = useState({});
   const [activeTab, setActiveTab] = useState('posts');
   const itemsPerPage = 5;
+
+  // User List Modal State
+  const [showUserListModal, setShowUserListModal] = useState(false);
+  const [userListTitle, setUserListTitle] = useState('');
+  const [userListUsers, setUserListUsers] = useState([]);
+  const [userListLoading, setUserListLoading] = useState(false);
+
+  const handleShowFollowers = async () => {
+    setUserListTitle('Followers');
+    setShowUserListModal(true);
+    setUserListLoading(true);
+    try {
+      const res = await followAPI.getFollowers(userId);
+      setUserListUsers(res.followers);
+    } catch (error) {
+      console.error('Error fetching followers:', error);
+    } finally {
+      setUserListLoading(false);
+    }
+  };
+
+  const handleShowFollowing = async () => {
+    setUserListTitle('Following');
+    setShowUserListModal(true);
+    setUserListLoading(true);
+    try {
+      const res = await followAPI.getFollowing(userId);
+      setUserListUsers(res.following);
+    } catch (error) {
+      console.error('Error fetching following:', error);
+    } finally {
+      setUserListLoading(false);
+    }
+  };
 
   // Load user basic info on mount AND load initial posts
   useEffect(() => {
@@ -85,12 +120,25 @@ export default function ProfilePage() {
       try {
         console.log('Loading initial posts for userId:', storedUserId);
         setLoading(true);
-        const postsData = await postsAPI.getUserPosts(storedUserId, 1, itemsPerPage);
+
+        const [postsData, followersRes, followingRes] = await Promise.all([
+          postsAPI.getUserPosts(storedUserId, 1, itemsPerPage),
+          followAPI.getFollowers(storedUserId),
+          followAPI.getFollowing(storedUserId)
+        ]);
+
         console.log('Initial posts loaded:', postsData);
         setPosts(postsData.posts || []);
         setPagination(postsData.pagination || {});
+
+        // Update user with follow counts
+        setUser(prev => ({
+          ...prev,
+          followersCount: followersRes.count,
+          followingCount: followingRes.count
+        }));
       } catch (error) {
-        console.error('Error loading initial posts:', error);
+        console.error('Error loading initial data:', error);
       } finally {
         setLoading(false);
       }
@@ -117,7 +165,7 @@ export default function ProfilePage() {
           console.log('User posts response:', postsData);
           setPosts(postsData.posts || []);
           setPagination(postsData.pagination || {});
-        } 
+        }
         else if (activeTab === 'liked') {
           console.log('Fetching liked posts for page:', likedPage);
           const likedData = await postsAPI.getLikedPosts(userId, likedPage, itemsPerPage);
@@ -202,7 +250,7 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       const response = await authAPI.updateProfile(formData.displayName, formData.photoURL);
-      
+
       if (response.success) {
         // Update local state
         setUser(formData);
@@ -331,11 +379,25 @@ export default function ProfilePage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-6 border-t border-gray-200">
+          <div className="grid grid-cols-3 gap-4 pt-6 border-t border-gray-200">
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">{pagination.total || 0}</div>
-              <div className="text-sm text-gray-600">Posts Published</div>
+              <div className="text-sm text-gray-600">Posts</div>
             </div>
+            <button
+              onClick={handleShowFollowers}
+              className="text-center cursor-pointer hover:bg-gray-50 rounded-lg py-1 transition-colors w-full"
+            >
+              <div className="text-2xl font-bold text-purple-600">{user?.followersCount || 0}</div>
+              <div className="text-sm text-gray-600">Followers</div>
+            </button>
+            <button
+              onClick={handleShowFollowing}
+              className="text-center cursor-pointer hover:bg-gray-50 rounded-lg py-1 transition-colors w-full"
+            >
+              <div className="text-2xl font-bold text-purple-600">{user?.followingCount || 0}</div>
+              <div className="text-sm text-gray-600">Following</div>
+            </button>
           </div>
         </div>
 
@@ -348,11 +410,10 @@ export default function ProfilePage() {
                 setActiveTab('posts');
                 setCurrentPage(1);
               }}
-              className={`px-6 py-3 font-semibold transition-colors whitespace-nowrap ${
-                activeTab === 'posts'
-                  ? 'text-white border-b-2 border-white'
-                  : 'text-pink-100 hover:text-white'
-              }`}
+              className={`px-6 py-3 font-semibold transition-colors whitespace-nowrap ${activeTab === 'posts'
+                ? 'text-white border-b-2 border-white'
+                : 'text-pink-100 hover:text-white'
+                }`}
             >
               Published Stories
             </button>
@@ -361,11 +422,10 @@ export default function ProfilePage() {
                 setActiveTab('liked');
                 setLikedPage(1);
               }}
-              className={`px-6 py-3 font-semibold transition-colors whitespace-nowrap ${
-                activeTab === 'liked'
-                  ? 'text-white border-b-2 border-white'
-                  : 'text-pink-100 hover:text-white'
-              }`}
+              className={`px-6 py-3 font-semibold transition-colors whitespace-nowrap ${activeTab === 'liked'
+                ? 'text-white border-b-2 border-white'
+                : 'text-pink-100 hover:text-white'
+                }`}
             >
               Liked Stories
             </button>
@@ -373,11 +433,10 @@ export default function ProfilePage() {
               onClick={() => {
                 setActiveTab('communities');
               }}
-              className={`px-6 py-3 font-semibold transition-colors whitespace-nowrap ${
-                activeTab === 'communities'
-                  ? 'text-white border-b-2 border-white'
-                  : 'text-pink-100 hover:text-white'
-              }`}
+              className={`px-6 py-3 font-semibold transition-colors whitespace-nowrap ${activeTab === 'communities'
+                ? 'text-white border-b-2 border-white'
+                : 'text-pink-100 hover:text-white'
+                }`}
             >
               My Communities
             </button>
@@ -474,11 +533,10 @@ export default function ProfilePage() {
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                            currentPage === page
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-white text-gray-800 hover:bg-gray-100'
-                          }`}
+                          className={`px-4 py-2 rounded-lg font-semibold transition-all ${currentPage === page
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-white text-gray-800 hover:bg-gray-100'
+                            }`}
                         >
                           {page}
                         </button>
@@ -570,11 +628,10 @@ export default function ProfilePage() {
                         <button
                           key={page}
                           onClick={() => setLikedPage(page)}
-                          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                            likedPage === page
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-white text-gray-800 hover:bg-gray-100'
-                          }`}
+                          className={`px-4 py-2 rounded-lg font-semibold transition-all ${likedPage === page
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-white text-gray-800 hover:bg-gray-100'
+                            }`}
                         >
                           {page}
                         </button>
@@ -630,6 +687,15 @@ export default function ProfilePage() {
           ) : null}
         </div>
       </main>
+
+
+      <UserListModal
+        isOpen={showUserListModal}
+        onClose={() => setShowUserListModal(false)}
+        title={userListTitle}
+        users={userListUsers}
+        loading={userListLoading}
+      />
     </div>
   );
 }

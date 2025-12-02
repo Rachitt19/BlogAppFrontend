@@ -6,6 +6,7 @@ import UserMenu from '../auth/UserMenu';
 import AuthModal from '../auth/AuthModal';
 import Button from '../ui/Button';
 import Link from 'next/link';
+import { MessageCircle } from 'lucide-react';
 
 const Header = () => {
   const { user, loading } = useAuth();
@@ -22,11 +23,22 @@ const Header = () => {
                 CollabX
               </h1>
             </Link>
-            
+
             <div className="flex items-center gap-4">
               <Link href="/communities" className="text-white hover:text-pink-200 font-semibold transition-colors">
                 Communities
               </Link>
+
+              {user && (
+                <Link href="/chat" className="text-white hover:text-pink-200 transition-colors relative group">
+                  <div className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                    <MessageCircle size={24} />
+                    {/* Unread badge placeholder - can be connected to real state later */}
+                    {/* <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-indigo-900"></span> */}
+                  </div>
+                </Link>
+              )}
+
               {loading ? (
                 <div className="w-8 h-8 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
               ) : user ? (

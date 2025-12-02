@@ -193,7 +193,7 @@ export default function BlogDetailPage() {
 
             {/* Meta Info */}
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6 text-white text-sm">
-              <Link href={`/user/${post.author._id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <Link href={`/profile/${post.author._id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center font-bold">
                   {post.author.displayName?.charAt(0).toUpperCase()}
                 </div>
@@ -256,11 +256,10 @@ export default function BlogDetailPage() {
             <div className="flex items-center gap-4 mb-12 pb-8 border-b border-gray-200">
               <button
                 onClick={handleLike}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
-                  liked
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${liked
                     ? 'bg-red-100 text-red-700 border-2 border-red-400'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-200'
-                }`}
+                  }`}
               >
                 {liked ? (
                   <Heart size={20} fill="currentColor" color="#dc2626" />

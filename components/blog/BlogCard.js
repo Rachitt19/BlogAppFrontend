@@ -16,7 +16,7 @@ const BlogCard = ({ post, onLike, onPostClick }) => {
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
@@ -26,18 +26,18 @@ const BlogCard = ({ post, onLike, onPostClick }) => {
   };
 
   const authorName = post.author?.displayName || post.authorName || 'Anonymous';
-  
+
   // Get userId from localStorage
   let userId = null;
   if (typeof window !== 'undefined') {
     userId = localStorage.getItem('userId');
   }
-  
+
   // Calculate like state
   const likes = Array.isArray(post.likes) ? post.likes : [];
   const likeCount = likes.length;
   const isLiked = userId ? likes.includes(userId) : false;
-  
+
   const commentCount = post.comments?.length || 0;
   const viewCount = post.views || 0;
   const postId = post._id || post.id;
@@ -55,7 +55,7 @@ const BlogCard = ({ post, onLike, onPostClick }) => {
               </span>
               <span className="text-xs text-gray-500">{formatDate(post.createdAt)}</span>
             </div>
-            
+
             <Link href={`/blog/${postId}`}>
               <h2 className="text-xl font-bold text-gray-900 hover:text-purple-600 transition-colors cursor-pointer line-clamp-2 mb-2">
                 {post.title}
@@ -71,13 +71,15 @@ const BlogCard = ({ post, onLike, onPostClick }) => {
 
         {/* Author Info */}
         <div className="flex items-center gap-3 py-3 border-t border-b border-gray-100">
-          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {authorName?.charAt(0).toUpperCase()}
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">{authorName}</p>
-            <p className="text-xs text-gray-500">Author</p>
-          </div>
+          <Link href={`/profile/${post.author?._id || post.author}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              {authorName?.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-900 hover:text-purple-600 transition-colors">{authorName}</p>
+              <p className="text-xs text-gray-500">Author</p>
+            </div>
+          </Link>
         </div>
 
         {/* Stats Bar - Reddit/Quora Style */}
@@ -116,7 +118,7 @@ const BlogCard = ({ post, onLike, onPostClick }) => {
             View Post
           </button>
         </Link>
-        
+
         <button
           onClick={() => {
             const token = localStorage.getItem('authToken');
@@ -126,11 +128,10 @@ const BlogCard = ({ post, onLike, onPostClick }) => {
             }
             onLike(postId);
           }}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-            isLiked
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${isLiked
               ? 'bg-red-50 text-red-600 hover:bg-red-100'
               : 'bg-gray-50 text-gray-700 hover:bg-red-50 hover:text-red-600'
-          }`}
+            }`}
         >
           <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
           Like
