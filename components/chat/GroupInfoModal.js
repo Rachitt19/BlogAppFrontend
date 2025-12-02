@@ -17,10 +17,16 @@ const GroupInfoModal = ({ chat, onClose, onUpdate, onLeave }) => {
     const [currentUser, setCurrentUser] = useState(null);
 
     useEffect(() => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        setCurrentUser(user);
-        console.log('Current User:', user);
-        console.log('Chat Admin:', chat.groupAdmin);
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            // Normalize user ID
+            const userId = user._id || user.id || user.userId || localStorage.getItem('userId');
+            const normalizedUser = { ...user, _id: userId };
+            setCurrentUser(normalizedUser);
+            console.log('Current User (Normalized):', normalizedUser);
+        }
+        console.log('Chat Group Admin:', chat.groupAdmin);
     }, [chat.groupAdmin]);
 
     useEffect(() => {
@@ -28,10 +34,12 @@ const GroupInfoModal = ({ chat, onClose, onUpdate, onLeave }) => {
         setGroupImage(chat.groupImage || '');
     }, [chat]);
 
-    const isAdmin = currentUser && (
+    const isAdmin = currentUser && chat.groupAdmin && (
         (typeof chat.groupAdmin === 'string' && chat.groupAdmin === currentUser._id) ||
         (typeof chat.groupAdmin === 'object' && chat.groupAdmin._id === currentUser._id)
     );
+
+    console.log('Is Admin:', isAdmin, 'Group Admin:', chat.groupAdmin, 'Current User:', currentUser?._id);
 
     useEffect(() => {
         const searchUsers = async () => {

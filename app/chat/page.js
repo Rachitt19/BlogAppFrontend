@@ -202,8 +202,16 @@ export default function ChatPage() {
                                                 }`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 ${chat.isGroup ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-purple-500 to-pink-500'}`}>
-                                                    {chat.isGroup ? <Users size={24} /> : chatImage}
+                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 ${chat.isGroup ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-purple-500 to-pink-500'} overflow-hidden`}>
+                                                    {chat.isGroup ? (
+                                                        chat.groupImage ? (
+                                                            <img src={chat.groupImage} alt={chat.groupName} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <Users size={24} />
+                                                        )
+                                                    ) : (
+                                                        chatImage
+                                                    )}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-baseline mb-1">
@@ -236,8 +244,16 @@ export default function ChatPage() {
                                     className={`p-4 bg-white border-b border-gray-200 flex items-center gap-3 shadow-sm ${activeChat.isGroup ? 'cursor-pointer hover:bg-gray-50' : ''}`}
                                     onClick={() => activeChat.isGroup && setShowGroupInfo(true)}
                                 >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${activeChat.isGroup ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-purple-500 to-pink-500'}`}>
-                                        {activeChat.isGroup ? <Users size={20} /> : getChatImage(activeChat)}
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${activeChat.isGroup ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-purple-500 to-pink-500'} overflow-hidden`}>
+                                        {activeChat.isGroup ? (
+                                            activeChat.groupImage ? (
+                                                <img src={activeChat.groupImage} alt={activeChat.groupName} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Users size={20} />
+                                            )
+                                        ) : (
+                                            getChatImage(activeChat)
+                                        )}
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-gray-800">
