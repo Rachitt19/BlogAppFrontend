@@ -4,7 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/layout/Header';
 import { chatAPI, authAPI } from '../../lib/api';
-import { Send, Search, MessageCircle } from 'lucide-react';
+import GroupChatModal from '../../components/chat/GroupChatModal';
+import GroupInfoModal from '../../components/chat/GroupInfoModal';
+import { Send, Search, MessageCircle, Plus, Users } from 'lucide-react';
 import io from 'socket.io-client';
 
 export default function ChatPage() {
@@ -16,6 +18,8 @@ export default function ChatPage() {
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const [socket, setSocket] = useState(null);
+    const [showGroupModal, setShowGroupModal] = useState(false);
+    const [showGroupInfo, setShowGroupInfo] = useState(false);
     const messagesEndRef = useRef(null);
 
     // Initialize user and socket
@@ -49,6 +53,10 @@ export default function ChatPage() {
 
                 newSocket.on('chat_updated', (data) => {
                     // Refresh chats list to show new last message
+                    loadChats();
+                });
+
+                newSocket.on('new_group_chat', (chat) => {
                     loadChats();
                 });
 
@@ -124,9 +132,16 @@ export default function ChatPage() {
         }
     };
 
-    const getOtherParticipant = (chat) => {
-        if (!currentUser) return null;
-        return chat.participants.find(p => p._id !== currentUser.id) || chat.participants[0];
+    const getChatName = (chat) => {
+        if (chat.isGroup) return chat.groupName;
+        const otherUser = chat.participants.find(p => p._id !== currentUser?.id) || chat.participants[0];
+        return otherUser?.displayName || 'Unknown User';
+    };
+
+    const getChatImage = (chat) => {
+        if (chat.isGroup) return null; // Use default group icon
+        const otherUser = chat.participants.find(p => p._id !== currentUser?.id) || chat.participants[0];
+        return otherUser?.displayName?.charAt(0).toUpperCase();
     };
 
     if (loading) {
@@ -148,7 +163,16 @@ export default function ChatPage() {
                     {/* Sidebar - Chat List */}
                     <div className="w-1/3 border-r border-gray-200 flex flex-col">
                         <div className="p-4 border-b border-gray-200">
-                            <h2 className="text-xl font-bold text-gray-800 mb-4">Messages</h2>
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-bold text-gray-800">Messages</h2>
+                                <button
+                                    onClick={() => setShowGroupModal(true)}
+                                    className="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors"
+                                    title="Create Group"
+                                >
+                                    <Plus size={20} />
+                                </button>
+                            </div>
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
@@ -167,7 +191,9 @@ export default function ChatPage() {
                                 </div>
                             ) : (
                                 chats.map(chat => {
-                                    const otherUser = getOtherParticipant(chat);
+                                    const chatName = getChatName(chat);
+                                    const chatImage = getChatImage(chat);
+
                                     return (
                                         <div
                                             key={chat._id}
@@ -176,19 +202,20 @@ export default function ChatPage() {
                                                 }`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                                                    {otherUser?.displayName?.charAt(0).toUpperCase()}
+                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 ${chat.isGroup ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-purple-500 to-pink-500'}`}>
+                                                    {chat.isGroup ? <Users size={24} /> : chatImage}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-baseline mb-1">
                                                         <h3 className="font-semibold text-gray-800 truncate">
-                                                            {otherUser?.displayName}
+                                                            {chatName}
                                                         </h3>
                                                         <span className="text-xs text-gray-500">
                                                             {new Date(chat.updatedAt).toLocaleDateString()}
                                                         </span>
                                                     </div>
                                                     <p className="text-sm text-gray-500 truncate">
+                                                        {chat.isGroup && chat.lastMessage ? `${chat.lastMessage.sender?.displayName || 'User'}: ` : ''}
                                                         {chat.lastMessage?.content || 'Start a conversation'}
                                                     </p>
                                                 </div>
@@ -205,18 +232,27 @@ export default function ChatPage() {
                         {activeChat ? (
                             <>
                                 {/* Chat Header */}
-                                <div className="p-4 bg-white border-b border-gray-200 flex items-center gap-3 shadow-sm">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
-                                        {getOtherParticipant(activeChat)?.displayName?.charAt(0).toUpperCase()}
+                                <div
+                                    className={`p-4 bg-white border-b border-gray-200 flex items-center gap-3 shadow-sm ${activeChat.isGroup ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+                                    onClick={() => activeChat.isGroup && setShowGroupInfo(true)}
+                                >
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${activeChat.isGroup ? 'bg-gradient-to-br from-blue-500 to-cyan-500' : 'bg-gradient-to-br from-purple-500 to-pink-500'}`}>
+                                        {activeChat.isGroup ? <Users size={20} /> : getChatImage(activeChat)}
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-gray-800">
-                                            {getOtherParticipant(activeChat)?.displayName}
+                                            {getChatName(activeChat)}
                                         </h3>
-                                        <p className="text-xs text-green-500 flex items-center gap-1">
-                                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                                            Online
-                                        </p>
+                                        {activeChat.isGroup ? (
+                                            <p className="text-xs text-gray-500">
+                                                {activeChat.participants.length} members
+                                            </p>
+                                        ) : (
+                                            <p className="text-xs text-green-500 flex items-center gap-1">
+                                                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                                Online
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -229,16 +265,26 @@ export default function ChatPage() {
                                                 key={index}
                                                 className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                                             >
-                                                <div
-                                                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${isMe
-                                                        ? 'bg-purple-600 text-white rounded-br-none'
-                                                        : 'bg-white text-gray-800 shadow-sm rounded-bl-none'
-                                                        }`}
-                                                >
-                                                    <p>{msg.content}</p>
-                                                    <p className={`text-xs mt-1 ${isMe ? 'text-purple-200' : 'text-gray-400'}`}>
-                                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
+                                                {!isMe && activeChat.isGroup && (
+                                                    <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold text-gray-600 mr-2 self-end mb-1">
+                                                        {msg.sender.displayName?.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                <div className="max-w-[70%]">
+                                                    {!isMe && activeChat.isGroup && (
+                                                        <p className="text-xs text-gray-500 ml-1 mb-1">{msg.sender.displayName}</p>
+                                                    )}
+                                                    <div
+                                                        className={`rounded-2xl px-4 py-2 ${isMe
+                                                            ? 'bg-purple-600 text-white rounded-br-none'
+                                                            : 'bg-white text-gray-800 shadow-sm rounded-bl-none'
+                                                            }`}
+                                                    >
+                                                        <p>{msg.content}</p>
+                                                        <p className={`text-xs mt-1 ${isMe ? 'text-purple-200' : 'text-gray-400'}`}>
+                                                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
@@ -275,6 +321,31 @@ export default function ChatPage() {
                     </div>
                 </div>
             </main>
+
+            {showGroupModal && (
+                <GroupChatModal
+                    onClose={() => setShowGroupModal(false)}
+                    onGroupCreated={(newChat) => {
+                        setChats(prev => [newChat, ...prev]);
+                        setActiveChat(newChat);
+                    }}
+                />
+            )}
+
+            {showGroupInfo && activeChat && (
+                <GroupInfoModal
+                    chat={activeChat}
+                    onClose={() => setShowGroupInfo(false)}
+                    onUpdate={(updatedChat) => {
+                        setActiveChat(updatedChat);
+                        setChats(prev => prev.map(c => c._id === updatedChat._id ? updatedChat : c));
+                    }}
+                    onLeave={() => {
+                        setActiveChat(null);
+                        setChats(prev => prev.filter(c => c._id !== activeChat._id));
+                    }}
+                />
+            )}
         </div>
     );
 }
