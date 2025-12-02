@@ -261,7 +261,7 @@ export default function ChatPage() {
                                         </h3>
                                         {activeChat.isGroup ? (
                                             <p className="text-xs text-gray-500">
-                                                {activeChat.participants.length} members
+                                                {new Set(activeChat.participants.map(p => p._id)).size} members
                                             </p>
                                         ) : (
                                             <p className="text-xs text-green-500 flex items-center gap-1">
